@@ -202,6 +202,10 @@ export const downloadClients = pgTable("download_clients", {
   host: varchar("host", { length: 255 }).notNull(),
   port: integer("port").default(8080).notNull(),
   useSsl: boolean("use_ssl").default(false).notNull(),
+  // Optional path prefix appended to the client's base URL, for a client
+  // reached behind a path-routed reverse proxy (i.e. a qBittorrent exposed at
+  // /user-nadwey/qui/proxy/<key>). Empty means no prefix.
+  urlPath: varchar("url_path", { length: 255 }).default("").notNull(),
   // Which credential the client authenticates with: "password" (username +
   // password, the default and the only option before qBittorrent 5.2.0) or
   // "apikey". Each mode reads its own column and the other is blanked on a

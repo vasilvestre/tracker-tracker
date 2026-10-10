@@ -1,7 +1,8 @@
 // src/lib/download-clients/qbt/transport.ts
 //
 // Available functions:
-//   buildBaseUrl          - Construct base URL from host/port/ssl
+//   normalizeUrlPath      - Normalise an optional client URL path prefix
+//   buildBaseUrl          - Construct base URL from host/port/ssl/urlPath
 //   credentialFingerprint - Non-reversible hash identifying some secret material
 //   blockKeyFor           - Compose the auth-block map key from baseUrl + fingerprint
 //   clearAuthBlocks       - Drop auth blocks for one baseUrl (explicit user retry)
@@ -52,10 +53,17 @@ function describeFetchError(err: unknown): string {
   return "Unknown network error"
 }
 
-export function buildBaseUrl(host: string, port: number, ssl: boolean): string {
+export function normalizeUrlPath(urlPath?: string): string {
+  const trimmed = urlPath?.trim() ?? ""
+  if (!trimmed) return ""
+  const withLeading = trimmed.startsWith("/") ? trimmed : `/${trimmed}`
+  return withLeading.replace(/\/+$/, "")
+}
+
+export function buildBaseUrl(host: string, port: number, ssl: boolean, urlPath = ""): string {
   // Strip any protocol the user may have included (i.e "http://myhost")
   const cleanHost = sanitizeHost(host)
-  return `${ssl ? "https" : "http"}://${cleanHost}:${port}`
+  return `${ssl ? "https" : "http"}://${cleanHost}:${port}${normalizeUrlPath(urlPath)}`
 }
 
 // ---------------------------------------------------------------------------
@@ -72,7 +80,10 @@ export type SidCookie = { name: string; value: string }
  * the endpoints never branch on a mode, and session-only operations such as
  * invalidateSession are unreachable from the key path by construction.
  */
-export type QbtAuth = { mode: "session"; sid: SidCookie } | { mode: "apikey"; key: string }
+export type QbtAuth =
+  | { mode: "session"; sid: SidCookie }
+  | { mode: "apikey"; key: string }
+  | { mode: "none" }
 
 const gSid = globalThis as typeof globalThis & {
   __qbtSidCache?: Map<string, SidCookie>
@@ -86,13 +97,14 @@ export async function getSession(
   port: number,
   ssl: boolean,
   username: string,
-  password: string
+  password: string,
+  urlPath = ""
 ): Promise<{ baseUrl: string; sid: SidCookie }> {
-  const baseUrl = buildBaseUrl(host, port, ssl)
+  const baseUrl = buildBaseUrl(host, port, ssl, urlPath)
   const cached = sidCache.get(baseUrl)
   if (cached) return { baseUrl, sid: cached }
 
-  const sid = await login(host, port, ssl, username, password)
+  const sid = await login(host, port, ssl, username, password, urlPath)
   sidCache.set(baseUrl, sid)
   return { baseUrl, sid }
 }
@@ -210,15 +222,16 @@ export async function withSessionRetry<T>(
   ssl: boolean,
   username: string,
   password: string,
+  urlPath: string,
   op: (baseUrl: string, sid: SidCookie) => Promise<T>
 ): Promise<T> {
-  const { baseUrl, sid } = await getSession(host, port, ssl, username, password)
+  const { baseUrl, sid } = await getSession(host, port, ssl, username, password, urlPath)
   try {
     return await op(baseUrl, sid)
   } catch (err) {
     if (err instanceof Error && err.message === "Session expired") {
       invalidateSession(baseUrl)
-      const fresh = await getSession(host, port, ssl, username, password)
+      const fresh = await getSession(host, port, ssl, username, password, urlPath)
       return await op(baseUrl, fresh.sid)
     }
     throw err
@@ -246,9 +259,10 @@ export async function login(
   port: number,
   ssl: boolean,
   username: string,
-  password: string
+  password: string,
+  urlPath = ""
 ): Promise<SidCookie> {
-  const baseUrl = buildBaseUrl(host, port, ssl)
+  const baseUrl = buildBaseUrl(host, port, ssl, urlPath)
   const url = `${baseUrl}/api/v2/auth/login`
   const body = new URLSearchParams({ username, password }).toString()
 
@@ -336,9 +350,9 @@ export async function login(
 }
 
 function authHeaders(auth: QbtAuth): Record<string, string> {
-  return auth.mode === "session"
-    ? { Cookie: `${auth.sid.name}=${auth.sid.value}` }
-    : { Authorization: `Bearer ${auth.key}` }
+  if (auth.mode === "session") return { Cookie: `${auth.sid.name}=${auth.sid.value}` }
+  if (auth.mode === "apikey") return { Authorization: `Bearer ${auth.key}` }
+  return {}
 }
 
 async function qbtFetch(
@@ -406,7 +420,7 @@ async function qbtFetch(
     throw new Error(API_KEY_REJECTED)
   }
 
-  if (response.status === 403) {
+  if (auth.mode === "session" && response.status === 403) {
     invalidateSession(baseUrl)
     throw new Error("Session expired")
   }

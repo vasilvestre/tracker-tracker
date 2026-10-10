@@ -65,6 +65,7 @@ vi.mock("@/lib/download-clients/qbt/transport", () => ({
       _s: boolean,
       _u: string,
       _pw: string,
+      _up: string,
       op: (baseUrl: string, sid: { name: string; value: string }) => unknown
     ) => op("http://localhost:8080", { name: "SID", value: "test-sid" })
   ),
@@ -199,7 +200,7 @@ describe("QbtClientAdapter", () => {
     await adapter.testConnection()
 
     expect(invalidateSession).toHaveBeenCalledWith("http://localhost:8080")
-    expect(login).toHaveBeenCalledWith("localhost", 8080, false, "admin", "pass")
+    expect(login).toHaveBeenCalledWith("localhost", 8080, false, "admin", "pass", "")
     expect(getTransferInfo).toHaveBeenCalled()
   })
 

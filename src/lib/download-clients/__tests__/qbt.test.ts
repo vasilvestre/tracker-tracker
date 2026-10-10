@@ -10,6 +10,7 @@ import {
   getTorrents,
   getTransferInfo,
   login,
+  normalizeUrlPath,
   type QbtAuth,
 } from "../qbt/transport"
 import type { QbtTorrent } from "../qbt/types"
@@ -25,6 +26,29 @@ describe("buildBaseUrl", () => {
 
   it("builds an https URL when ssl is true", () => {
     expect(buildBaseUrl("qbt.example.com", 443, true)).toBe("https://qbt.example.com:443")
+  })
+
+  it("appends an optional url path", () => {
+    expect(buildBaseUrl("host", 7476, false, "/user-nadwey/qui/proxy/abc")).toBe(
+      "http://host:7476/user-nadwey/qui/proxy/abc"
+    )
+  })
+
+  it("ignores an empty url path", () => {
+    expect(buildBaseUrl("host", 8080, false, "")).toBe("http://host:8080")
+  })
+})
+
+describe("normalizeUrlPath", () => {
+  it("returns empty for undefined and blank input", () => {
+    expect(normalizeUrlPath(undefined)).toBe("")
+    expect(normalizeUrlPath("   ")).toBe("")
+  })
+
+  it("adds a leading slash and strips trailing slashes", () => {
+    expect(normalizeUrlPath("user/qui/proxy/abc")).toBe("/user/qui/proxy/abc")
+    expect(normalizeUrlPath("/user/qui/proxy/abc/")).toBe("/user/qui/proxy/abc")
+    expect(normalizeUrlPath("  /user/qui/  ")).toBe("/user/qui")
   })
 })
 

@@ -4,7 +4,7 @@ export const VALID_CLIENT_TYPES = ["qbittorrent"] as const
 
 export type ClientType = (typeof VALID_CLIENT_TYPES)[number]
 
-export const VALID_AUTH_METHODS = ["password", "apikey"] as const
+export const VALID_AUTH_METHODS = ["password", "apikey", "none"] as const
 
 export type AuthMethod = (typeof VALID_AUTH_METHODS)[number]
 
@@ -65,6 +65,7 @@ export interface DownloadClientRow {
   host: string
   port: number
   useSsl: boolean
+  urlPath: string
   authMethod: string
   encryptedUsername: string
   encryptedPassword: string
@@ -96,6 +97,7 @@ export function assertAuthMethod(authMethod: string): AuthMethod {
 export type ClientCredentials =
   | { authMethod: "password"; username: string; password: string }
   | { authMethod: "apikey"; apiKey: string }
+  | { authMethod: "none" }
 
 /**
  * Download client adapter interface. Each supported client type (qBittorrent,

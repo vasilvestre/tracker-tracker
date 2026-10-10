@@ -62,6 +62,7 @@ function makeClient(overrides: Partial<DownloadClientRow> = {}): DownloadClientR
     host: "localhost",
     port: 8080,
     useSsl: false,
+    urlPath: "",
     authMethod: "password",
     encryptedUsername: "enc-admin",
     encryptedPassword: "enc-pass",
@@ -185,7 +186,7 @@ describe("fetchAndMergeTorrents — fast path (store is fresh, no filter)", () =
 
     await fetchAndMergeTorrents([makeClient()], ["aither"], makeKey())
 
-    expect(buildBaseUrl).toHaveBeenCalledWith("localhost", 8080, false)
+    expect(buildBaseUrl).toHaveBeenCalledWith("localhost", 8080, false, "")
     expect(isStoreFresh).toHaveBeenCalledWith("http://localhost:8080", expect.any(Number))
   })
 

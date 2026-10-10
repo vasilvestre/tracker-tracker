@@ -12,6 +12,7 @@ import {
   validateIntRange,
   validateMaxLength,
   validatePort,
+  validateUrlPath,
 } from "@/lib/api-helpers"
 import { encrypt } from "@/lib/crypto"
 import { sanitizeHost } from "@/lib/data-transforms"
@@ -92,6 +93,13 @@ export async function PATCH(request: Request, props: RouteContext) {
 
   if (typeof body.useSsl === "boolean") updates.useSsl = body.useSsl
   if (typeof body.enabled === "boolean") updates.enabled = body.enabled
+
+  if (typeof body.urlPath === "string") {
+    const urlPath = body.urlPath.trim()
+    const urlPathErr = validateUrlPath(urlPath)
+    if (urlPathErr) return urlPathErr
+    updates.urlPath = urlPath
+  }
 
   if (typeof body.pollIntervalSeconds === "number") {
     const pollErr = validateIntRange(
@@ -196,6 +204,13 @@ export async function PATCH(request: Request, props: RouteContext) {
       updates.authMethod = "password"
       updates.encryptedUsername = encrypt(body.username as string, getKey())
       updates.encryptedPassword = encrypt(body.password as string, getKey())
+      updates.encryptedApiKey = ""
+      break
+    }
+    case "none": {
+      updates.authMethod = "none"
+      updates.encryptedUsername = encrypt("", getKey())
+      updates.encryptedPassword = encrypt("", getKey())
       updates.encryptedApiKey = ""
       break
     }

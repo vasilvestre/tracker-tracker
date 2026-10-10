@@ -123,6 +123,7 @@ export const BATCH_MEMBERS_MAX = 500
 // ─── Download Clients ─────────────────────────────────────────────────────────
 export const CROSS_SEED_TAGS_MAX = 50
 export const CROSS_SEED_TAG_MAX = 100
+export const URL_PATH_MAX = 500
 
 // ─── File Sizes ───────────────────────────────────────────────────────────────
 export const UPLOAD_IMAGE_MAX_BYTES = 32 * 1024 * 1024

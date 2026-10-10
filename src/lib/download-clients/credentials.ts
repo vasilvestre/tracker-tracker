@@ -12,6 +12,7 @@ export const CLIENT_CONNECTION_COLUMNS = {
   host: downloadClients.host,
   port: downloadClients.port,
   useSsl: downloadClients.useSsl,
+  urlPath: downloadClients.urlPath,
   authMethod: downloadClients.authMethod,
   encryptedUsername: downloadClients.encryptedUsername,
   encryptedPassword: downloadClients.encryptedPassword,
@@ -33,6 +34,9 @@ export function decryptClientCredentials(
   const authMethod = assertAuthMethod(client.authMethod)
 
   try {
+    if (authMethod === "none") {
+      return { authMethod }
+    }
     if (authMethod === "apikey") {
       return { authMethod, apiKey: decrypt(client.encryptedApiKey, key) }
     }
