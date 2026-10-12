@@ -96,6 +96,7 @@ export const BACKUP_CLIENT_COLUMNS = {
   host: downloadClients.host,
   port: downloadClients.port,
   useSsl: downloadClients.useSsl,
+  urlPath: downloadClients.urlPath,
   authMethod: downloadClients.authMethod,
   encryptedUsername: downloadClients.encryptedUsername,
   encryptedPassword: downloadClients.encryptedPassword,

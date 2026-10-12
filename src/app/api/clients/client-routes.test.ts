@@ -459,6 +459,49 @@ describe("POST /api/clients", () => {
     expect(res.status).toBe(400)
   })
 
+  it("stores a url path when provided", async () => {
+    const res = await POST(
+      postBody({
+        name: "Qui proxy",
+        host: "192.168.1.100",
+        urlPath: "/user-nadwey/qui/proxy/abc",
+      })
+    )
+
+    expect(res.status).toBe(201)
+    expect(inserted?.urlPath).toBe("/user-nadwey/qui/proxy/abc")
+  })
+
+  it("defaults urlPath to an empty string", async () => {
+    await POST(postBody({ name: "Local qBT", host: "localhost" }))
+
+    expect(inserted?.urlPath).toBe("")
+  })
+
+  it("rejects a url path that is not rooted", async () => {
+    const res = await POST(postBody({ name: "Local qBT", host: "localhost", urlPath: "user/qui" }))
+
+    expect(res.status).toBe(400)
+  })
+
+  it("rejects a url path that carries a scheme", async () => {
+    const res = await POST(
+      postBody({ name: "Local qBT", host: "localhost", urlPath: "http://evil.example.com" })
+    )
+
+    expect(res.status).toBe(400)
+  })
+
+  it("creates a none-auth client with no credentials", async () => {
+    const res = await POST(
+      postBody({ name: "Qui proxy", host: "192.168.1.100", authMethod: "none" })
+    )
+
+    expect(res.status).toBe(201)
+    expect(inserted?.authMethod).toBe("none")
+    expect(inserted?.encryptedApiKey).toBe("")
+  })
+
   it("still rejects a non-string username", async () => {
     const res = await POST(postBody({ name: "Local qBT", host: "localhost", username: 42 }))
 
@@ -660,5 +703,27 @@ describe("PATCH /api/clients/[id] credential handling", () => {
     expect(updates).not.toHaveProperty("authMethod")
     expect(updates).not.toHaveProperty("encryptedPassword")
     expect(updates).not.toHaveProperty("encryptedApiKey")
+  })
+
+  it("sets urlPath when provided", async () => {
+    const res = await PATCH(patchBody({ urlPath: "/user-nadwey/qui/proxy/abc" }), routeProps)
+
+    expect(res.status).toBe(200)
+    expect(updates?.urlPath).toBe("/user-nadwey/qui/proxy/abc")
+  })
+
+  it("rejects an invalid urlPath", async () => {
+    const res = await PATCH(patchBody({ urlPath: "not-rooted" }), routeProps)
+
+    expect(res.status).toBe(400)
+    expect(updates).toBeNull()
+  })
+
+  it("switches to none auth and blanks the credential columns", async () => {
+    const res = await PATCH(patchBody({ authMethod: "none" }), routeProps)
+
+    expect(res.status).toBe(200)
+    expect(updates?.authMethod).toBe("none")
+    expect(updates?.encryptedApiKey).toBe("")
   })
 })

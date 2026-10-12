@@ -80,6 +80,7 @@ export const HEARTBEAT_COLUMNS = {
   host: downloadClients.host,
   port: downloadClients.port,
   useSsl: downloadClients.useSsl,
+  urlPath: downloadClients.urlPath,
   authMethod: downloadClients.authMethod,
   encryptedUsername: downloadClients.encryptedUsername,
   encryptedPassword: downloadClients.encryptedPassword,
@@ -131,6 +132,7 @@ async function heartbeatClient(
     host: string
     port: number
     useSsl: boolean
+    urlPath: string
     authMethod: string
     encryptedUsername: string
     encryptedPassword: string
@@ -281,9 +283,11 @@ export async function deepPollClient(
   // uncredentialled client costs one line plus a reminder every 15 minutes,
   // not one every 30 seconds.
   const missingCredentials =
-    client.authMethod === "apikey"
-      ? !client.encryptedApiKey
-      : !client.encryptedUsername || !client.encryptedPassword
+    client.authMethod === "none"
+      ? false
+      : client.authMethod === "apikey"
+        ? !client.encryptedApiKey
+        : !client.encryptedUsername || !client.encryptedPassword
   if (missingCredentials) {
     const verdict = noteFailure(clientId, "deep-poll", "missing credential ciphertext")
     if (verdict.kind !== "silent") {

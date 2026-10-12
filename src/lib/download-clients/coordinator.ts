@@ -49,6 +49,7 @@ const CACHED_CLIENT_COLUMNS = {
   host: downloadClients.host,
   port: downloadClients.port,
   useSsl: downloadClients.useSsl,
+  urlPath: downloadClients.urlPath,
   crossSeedTags: downloadClients.crossSeedTags,
   cachedTorrentsAt: downloadClients.cachedTorrentsAt,
 } as const
@@ -268,7 +269,7 @@ export async function fetchFleetAggregation(
   let oldestCacheAt: Date | null = null
 
   for (const client of clients) {
-    const baseUrl = buildBaseUrl(client.host, client.port, client.useSsl)
+    const baseUrl = buildBaseUrl(client.host, client.port, client.useSsl, client.urlPath)
     let torrents: TorrentRecord[] | SlimTorrent[]
 
     if (isStoreFresh(baseUrl, STORE_MAX_AGE_MS)) {

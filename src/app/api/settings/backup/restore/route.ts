@@ -497,6 +497,7 @@ export async function POST(request: Request) {
             host: fields.host as string,
             port: fields.port as number,
             useSsl: fields.useSsl as boolean,
+            urlPath: (fields.urlPath as string) ?? "",
             // A cleared key would otherwise leave the client sending an empty
             // Bearer header forever, so fall back to the mode the "re-enter
             // and re-enable" message below actually tells the user to fix.

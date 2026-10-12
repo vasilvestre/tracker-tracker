@@ -37,9 +37,10 @@ export class QbtClientAdapter implements ClientAdapter {
     private readonly host: string,
     private readonly port: number,
     private readonly ssl: boolean,
-    private readonly creds: ClientCredentials
+    private readonly creds: ClientCredentials,
+    private readonly urlPath = ""
   ) {
-    this.baseUrl = buildBaseUrl(host, port, ssl)
+    this.baseUrl = buildBaseUrl(host, port, ssl, urlPath)
   }
 
   /**
@@ -51,9 +52,18 @@ export class QbtClientAdapter implements ClientAdapter {
     if (this.creds.authMethod === "apikey") {
       return op(this.baseUrl, { mode: "apikey", key: this.creds.apiKey })
     }
+    if (this.creds.authMethod === "none") {
+      return op(this.baseUrl, { mode: "none" })
+    }
     const { username, password } = this.creds
-    return withSessionRetry(this.host, this.port, this.ssl, username, password, (baseUrl, sid) =>
-      op(baseUrl, { mode: "session", sid })
+    return withSessionRetry(
+      this.host,
+      this.port,
+      this.ssl,
+      username,
+      password,
+      this.urlPath,
+      (baseUrl, sid) => op(baseUrl, { mode: "session", sid })
     )
   }
 
@@ -69,8 +79,12 @@ export class QbtClientAdapter implements ClientAdapter {
       await qbtGetTransferInfo(this.baseUrl, { mode: "apikey", key: this.creds.apiKey })
       return
     }
+    if (this.creds.authMethod === "none") {
+      await qbtGetTransferInfo(this.baseUrl, { mode: "none" })
+      return
+    }
     const { username, password } = this.creds
-    const sid = await login(this.host, this.port, this.ssl, username, password)
+    const sid = await login(this.host, this.port, this.ssl, username, password, this.urlPath)
     await qbtGetTransferInfo(this.baseUrl, { mode: "session", sid })
   }
 

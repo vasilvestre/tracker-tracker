@@ -50,7 +50,7 @@ async function fetchClientTorrents(
   key: Buffer,
   filter?: string
 ): Promise<TorrentRecord[]> {
-  const baseUrl = buildBaseUrl(client.host, client.port, client.useSsl)
+  const baseUrl = buildBaseUrl(client.host, client.port, client.useSsl, client.urlPath)
 
   // Fast path: store is warm from scheduler, serve from memory.
   // Falls back to live fetch if store is stale (i.e. scheduler missed 2+ cycles).

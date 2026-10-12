@@ -52,6 +52,7 @@ const API_KEY_HINT =
 const AUTH_METHOD_OPTIONS: { value: AuthMethod; label: string }[] = [
   { value: "password", label: "Username & Password" },
   { value: "apikey", label: "API Key" },
+  { value: "none", label: "None (proxy auth)" },
 ]
 
 /**
@@ -119,7 +120,7 @@ function CredentialFields({
           </div>
           <Subtext>{BLANK_CREDENTIALS_HINT}</Subtext>
         </>
-      ) : (
+      ) : authMethod === "apikey" ? (
         <>
           <Input
             type="password"
@@ -133,6 +134,11 @@ function CredentialFields({
           />
           <Subtext>{API_KEY_HINT}</Subtext>
         </>
+      ) : (
+        <Subtext>
+          No credentials are sent. Use this when the client is reached through a proxy that
+          authenticates on its own, such as Qui's client proxy.
+        </Subtext>
       )}
     </>
   )
@@ -165,6 +171,7 @@ const DRAFT_KEYS: (keyof DownloadClient)[] = [
   "host",
   "port",
   "useSsl",
+  "urlPath",
   "pollIntervalSeconds",
   "crossSeedTags",
 ]
@@ -208,7 +215,7 @@ function ClientCard({ client, linkedTrackers, onSaved, onRemove, onSetDefault }:
   // Credential change state. Show inputs for new clients (no creds yet) or after "Change"
   const [changingCredentials, setChangingCredentials] = useState(!client.hasCredentials)
   const [authMethod, setAuthMethod] = useState<AuthMethod>(
-    client.authMethod === "apikey" ? "apikey" : "password"
+    client.authMethod === "apikey" ? "apikey" : client.authMethod === "none" ? "none" : "password"
   )
   const [newUsername, setNewUsername] = useState("")
   const [newPassword, setNewPassword] = useState("")
@@ -217,7 +224,7 @@ function ClientCard({ client, linkedTrackers, onSaved, onRemove, onSetDefault }:
 
   // A blank username/password is a valid localhost-bypass setup, so only the
   // API-key mode has anything to require.
-  const canSaveCredentials = authMethod === "password" || newApiKey.trim().length > 0
+  const canSaveCredentials = authMethod !== "apikey" || newApiKey.trim().length > 0
 
   const { data: uptimeData = null } = useQuery({
     queryKey: ["client-uptime", client.id],
@@ -250,7 +257,9 @@ function ClientCard({ client, linkedTrackers, onSaved, onRemove, onSetDefault }:
       const body =
         authMethod === "apikey"
           ? { authMethod, apiKey: newApiKey }
-          : { authMethod, username: newUsername, password: newPassword }
+          : authMethod === "none"
+            ? { authMethod }
+            : { authMethod, username: newUsername, password: newPassword }
       const res = await fetch(`/api/clients/${client.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -368,7 +377,7 @@ function ClientCard({ client, linkedTrackers, onSaved, onRemove, onSetDefault }:
         label="Use SSL"
         checked={draft.useSsl}
         onChange={(v) => updateDraft({ useSsl: v })}
-        description={`Connect via ${draft.useSsl ? "https" : "http"}://${draft.host}:${draft.port}`}
+        description={`Connect via ${draft.useSsl ? "https" : "http"}://${draft.host}:${draft.port}${draft.urlPath}`}
       />
 
       {draft.useSsl && draft.port === 80 && (
@@ -383,6 +392,17 @@ function ClientCard({ client, linkedTrackers, onSaved, onRemove, onSetDefault }:
           message="Port 443 is typically used with SSL. Did you mean to enable SSL?"
         />
       )}
+
+      <Input
+        label="URL path"
+        value={draft.urlPath}
+        onChange={(e) => updateDraft({ urlPath: e.target.value })}
+        placeholder="/user-nadwey/qui/proxy/<key>"
+      />
+      <Subtext>
+        Optional path prefix when the client is reached behind a path-routed proxy, such as Qui's
+        client proxy. Leave blank for a direct connection.
+      </Subtext>
 
       <div className="border-t border-border" />
 
@@ -414,7 +434,13 @@ function ClientCard({ client, linkedTrackers, onSaved, onRemove, onSetDefault }:
                   type="button"
                   onClick={() => {
                     setChangingCredentials(false)
-                    setAuthMethod(client.authMethod === "apikey" ? "apikey" : "password")
+                    setAuthMethod(
+                      client.authMethod === "apikey"
+                        ? "apikey"
+                        : client.authMethod === "none"
+                          ? "none"
+                          : "password"
+                    )
                     setNewUsername("")
                     setNewPassword("")
                     setNewApiKey("")
@@ -606,6 +632,7 @@ function AddClientForm({
   const [name, setName] = useState("New Client")
   const [host, setHost] = useState("localhost")
   const [port, setPort] = useState(8080)
+  const [urlPath, setUrlPath] = useState("")
   const [authMethod, setAuthMethod] = useState<AuthMethod>("password")
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -618,7 +645,7 @@ function AddClientForm({
   // fallback, so it is the one credential the form insists on. Mirrors
   // POST /api/clients.
   const canSubmit =
-    name.trim() && host.trim() && (authMethod === "password" || apiKey.trim().length > 0)
+    name.trim() && host.trim() && (authMethod !== "apikey" || apiKey.trim().length > 0)
 
   async function handleSubmit() {
     if (!canSubmit) return
@@ -628,7 +655,9 @@ function AddClientForm({
       const credentials =
         authMethod === "apikey"
           ? { authMethod, apiKey: apiKey.trim() }
-          : { authMethod, username: username.trim(), password }
+          : authMethod === "none"
+            ? { authMethod }
+            : { authMethod, username: username.trim(), password }
       const res = await fetch("/api/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -636,6 +665,7 @@ function AddClientForm({
           name: name.trim(),
           host: host.trim(),
           port,
+          urlPath: urlPath.trim(),
           ...credentials,
           isDefault: isFirst,
         }),
@@ -677,6 +707,12 @@ function AddClientForm({
           <NumberInput label="Port" value={port} onChange={setPort} min={PORT_MIN} max={PORT_MAX} />
         </div>
       </div>
+      <Input
+        label="URL path"
+        value={urlPath}
+        onChange={(e) => setUrlPath(e.target.value)}
+        placeholder="/user-nadwey/qui/proxy/<key>"
+      />
       <CredentialFields
         authMethod={authMethod}
         onAuthMethodChange={setAuthMethod}

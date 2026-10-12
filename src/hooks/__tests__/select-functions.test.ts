@@ -28,6 +28,7 @@ function makeClient(overrides: Partial<SafeDownloadClient> = {}): SafeDownloadCl
     host: "localhost",
     port: 8080,
     useSsl: false,
+    urlPath: "",
     authMethod: "password",
     hasCredentials: true,
     pollIntervalSeconds: 300,

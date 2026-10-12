@@ -11,11 +11,12 @@ function createClientAdapter(
   host: string,
   port: number,
   ssl: boolean,
-  creds: ClientCredentials
+  creds: ClientCredentials,
+  urlPath: string
 ): ClientAdapter {
   switch (type) {
     case "qbittorrent":
-      return new QbtClientAdapter(host, port, ssl, creds)
+      return new QbtClientAdapter(host, port, ssl, creds, urlPath)
     default:
       throw new Error(`Unsupported client type: "${type}"`)
   }
@@ -33,6 +34,7 @@ export function createAdapterForClient(client: DownloadClientRow, key: Buffer): 
     client.host,
     client.port,
     client.useSsl,
-    creds
+    creds,
+    client.urlPath
   )
 }

@@ -155,6 +155,7 @@ export const clientColumns = {
   host: downloadClients.host,
   port: downloadClients.port,
   useSsl: downloadClients.useSsl,
+  urlPath: downloadClients.urlPath,
   authMethod: downloadClients.authMethod,
   // Whether a credential has ever been stored, per auth mode. Deliberately
   // tests the ciphertext, not the secret: a blank username/password is a valid

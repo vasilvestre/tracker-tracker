@@ -11,6 +11,7 @@ import {
   validateIntRange,
   validateMaxLength,
   validatePort,
+  validateUrlPath,
 } from "@/lib/api-helpers"
 import { encrypt } from "@/lib/crypto"
 import { sanitizeHost } from "@/lib/data-transforms"
@@ -56,6 +57,7 @@ export async function POST(request: Request) {
     type,
     port,
     useSsl,
+    urlPath,
     pollIntervalSeconds,
     isDefault,
     crossSeedTags,
@@ -69,6 +71,7 @@ export async function POST(request: Request) {
     type?: string
     port?: number
     useSsl?: boolean
+    urlPath?: string
     pollIntervalSeconds?: number
     isDefault?: boolean
     crossSeedTags?: string[]
@@ -83,7 +86,8 @@ export async function POST(request: Request) {
     typeof host !== "string" ||
     (typeof username !== "undefined" && typeof username !== "string") ||
     (typeof password !== "undefined" && typeof password !== "string") ||
-    (typeof apiKey !== "undefined" && typeof apiKey !== "string")
+    (typeof apiKey !== "undefined" && typeof apiKey !== "string") ||
+    (typeof urlPath !== "undefined" && typeof urlPath !== "string")
   ) {
     return NextResponse.json({ error: "Invalid field types" }, { status: 400 })
   }
@@ -101,8 +105,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "apiKey is required for apikey auth" }, { status: 400 })
   }
 
-  const resolvedUsername = resolvedAuthMethod === "apikey" ? "" : (username ?? "")
-  const resolvedPassword = resolvedAuthMethod === "apikey" ? "" : (password ?? "")
+  const resolvedUsername = resolvedAuthMethod === "password" ? (username ?? "") : ""
+  const resolvedPassword = resolvedAuthMethod === "password" ? (password ?? "") : ""
   const resolvedApiKey = resolvedAuthMethod === "apikey" ? (apiKey ?? "") : ""
 
   const nameErr = validateMaxLength(name, CREDENTIAL_MAX, "Name")
@@ -110,6 +114,10 @@ export async function POST(request: Request) {
 
   const hostErr = validateMaxLength(host, HOST_MAX, "Host")
   if (hostErr) return hostErr
+
+  const resolvedUrlPath = typeof urlPath === "string" ? urlPath.trim() : ""
+  const urlPathErr = validateUrlPath(resolvedUrlPath)
+  if (urlPathErr) return urlPathErr
 
   const usernameErr = validateMaxLength(resolvedUsername, CREDENTIAL_MAX, "Username")
   if (usernameErr) return usernameErr
@@ -190,6 +198,7 @@ export async function POST(request: Request) {
           type: resolvedType,
           port: resolvedPort,
           useSsl: typeof useSsl === "boolean" ? useSsl : false,
+          urlPath: resolvedUrlPath,
           authMethod: resolvedAuthMethod,
           encryptedUsername,
           encryptedPassword,

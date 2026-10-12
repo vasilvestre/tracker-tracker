@@ -11,6 +11,7 @@ import { getSession } from "@/lib/auth"
 // credentials.ts, which is "server-only".
 import { VALID_AUTH_METHODS } from "@/lib/download-clients/types"
 import { localDateStr } from "@/lib/formatters"
+import { URL_PATH_MAX } from "@/lib/limits"
 import { isUnsafeNetworkHost } from "@/lib/network"
 import { DATE_RE, isValidHex, isValidPort } from "@/lib/validators"
 
@@ -82,6 +83,30 @@ export function validatePort(port: number): NextResponse | null {
   if (!isValidPort(port)) {
     return NextResponse.json(
       { error: "Port must be an integer between 1 and 65535" },
+      { status: 400 }
+    )
+  }
+  return null
+}
+
+export function validateUrlPath(value: string, label = "URL path"): NextResponse | null {
+  if (value === "") return null
+  if (value.length > URL_PATH_MAX) {
+    return NextResponse.json(
+      { error: `${label} must be ${URL_PATH_MAX} characters or fewer` },
+      { status: 400 }
+    )
+  }
+  const invalid =
+    !value.startsWith("/") ||
+    value.includes("://") ||
+    value.includes("..") ||
+    value.includes("?") ||
+    value.includes("#") ||
+    /\s/.test(value)
+  if (invalid) {
+    return NextResponse.json(
+      { error: `${label} must start with "/" and contain no scheme, query, fragment, or spaces` },
       { status: 400 }
     )
   }
